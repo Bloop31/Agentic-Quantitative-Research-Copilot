@@ -35,6 +35,13 @@ from mcp_servers.market_data import (
     refresh_ticker,
 )
 
+from mcp_servers.quant import (
+    get_max_drawdown,
+    get_var_95,
+    get_correlation_matrix,
+    get_portfolio_summary,
+)
+
 load_dotenv()
 logger = logging.getLogger(__name__)
 
@@ -136,6 +143,70 @@ TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_max_drawdown",
+            "description": "Calculate maximum drawdown for one or more tickers. Use for peak-to-trough loss analysis.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tickers":    {"type": "array", "items": {"type": "string"}},
+                    "start_date": {"type": "string", "description": "YYYY-MM-DD"},
+                    "end_date":   {"type": "string", "description": "YYYY-MM-DD"},
+                },
+                "required": ["tickers", "start_date", "end_date"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_var_95",
+            "description": "Calculate historical 95% Value-at-Risk per ticker. Use for downside risk analysis.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tickers":    {"type": "array", "items": {"type": "string"}},
+                    "start_date": {"type": "string", "description": "YYYY-MM-DD"},
+                    "end_date":   {"type": "string", "description": "YYYY-MM-DD"},
+                },
+                "required": ["tickers", "start_date", "end_date"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_correlation_matrix",
+            "description": "Pairwise correlation between 2+ tickers. Use for diversification and portfolio construction analysis.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tickers":    {"type": "array", "items": {"type": "string"}},
+                    "start_date": {"type": "string", "description": "YYYY-MM-DD"},
+                    "end_date":   {"type": "string", "description": "YYYY-MM-DD"},
+                },
+                "required": ["tickers", "start_date", "end_date"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_portfolio_summary",
+            "description": "Equal-weight portfolio stats: annual return, volatility, Sharpe ratio. Use when asked about a portfolio of multiple tickers.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tickers":    {"type": "array", "items": {"type": "string"}},
+                    "start_date": {"type": "string", "description": "YYYY-MM-DD"},
+                    "end_date":   {"type": "string", "description": "YYYY-MM-DD"},
+                },
+                "required": ["tickers", "start_date", "end_date"],
+            },
+        },
+    },
 ]
 
 
@@ -190,6 +261,18 @@ async def _execute_tool(tool_name: str, tool_args: dict) -> str:
 
         elif tool_name == "refresh_ticker":
             result = await refresh_ticker(**tool_args)
+        
+        elif tool_name == "get_max_drawdown":
+            result = await get_max_drawdown(**tool_args)
+            
+        elif tool_name == "get_var_95":
+            result = await get_var_95(**tool_args)
+            
+        elif tool_name == "get_correlation_matrix":
+            result = await get_correlation_matrix(**tool_args)
+            
+        elif tool_name == "get_portfolio_summary":
+            result = await get_portfolio_summary(**tool_args)
 
         else:
             result = {"status": "error", "message": f"Unknown tool: {tool_name}"}
