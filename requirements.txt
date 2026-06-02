@@ -1,0 +1,50 @@
+# -----------------------------------------------------------------------------
+# 1. DATABASE
+# -----------------------------------------------------------------------------
+motor==3.7.1            # Async MongoDB driver (wraps pymongo for asyncio)
+pymongo==4.10.1         # Required by motor — also used for UpdateOne, ASCENDING
+
+
+# -----------------------------------------------------------------------------
+# 2. CACHE (Phase 2)
+# -----------------------------------------------------------------------------
+redis==5.2.1            # Redis async client (redis.asyncio) — install now, use later
+
+
+# -----------------------------------------------------------------------------
+# 3. MCP SERVERS  (market_data, portfolio, screener)
+# -----------------------------------------------------------------------------
+mcp==1.27.1             # Anthropic MCP framework — tool registration + server runner
+
+
+# -----------------------------------------------------------------------------
+# 4. AI AGENT
+# -----------------------------------------------------------------------------
+groq==1.2.0             # Groq SDK — runs Llama 3 / Mixtral tool-calling loop for free
+
+
+# -----------------------------------------------------------------------------
+# 5. DATA — fetch + quant
+# -----------------------------------------------------------------------------
+yfinance==0.2.61        # US market data (Close prices, free, no API key)
+pandas==2.2.3           # DataFrames — index=datetime, cols=tickers, values=close
+numpy==2.2.6            # Log returns: np.log(df / df.shift(1))
+scipy==1.15.3           # Stats: Sharpe, VaR, correlation tests (used in quant layer)
+
+
+# -----------------------------------------------------------------------------
+# 6. API LAYER (Phase 2)
+# -----------------------------------------------------------------------------
+fastapi==0.136.3        # Async REST API framework
+uvicorn[standard]==0.34.2  # ASGI server to run FastAPI
+websockets==15.0.1      # WebSocket support (also pulled in by uvicorn[standard])
+python-dotenv==1.1.0    # Load .env for GROQ_API_KEY, MONGO_URI etc.
+pydantic==2.11.5        # Request/response validation (FastAPI uses this internally)
+
+
+# -----------------------------------------------------------------------------
+# 7. DEV / TESTING (optional but recommended)
+# -----------------------------------------------------------------------------
+pytest==8.3.5           # Test runner
+pytest-asyncio==0.26.0  # Async test support (for testing motor, agent)
+httpx==0.28.1           # Test FastAPI endpoints (replaces requests in async tests)
