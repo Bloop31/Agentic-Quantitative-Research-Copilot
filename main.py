@@ -28,7 +28,7 @@ from db.mongo import connect_db, close_db
 from agent import run_query
 from redis_cache import connect_redis, close_redis, get_cached, set_cached
 from mcp_servers.market_data import _get_multi_ticker_closes
-from quant.backtest import Backtester
+from quant.backtest import Backtester, BacktestError
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -185,16 +185,19 @@ async def query_endpoint(request: Request, body: QueryRequest):
 @app.post("/backtest")
 @limiter.limit("5/minute")
 async def backtest_endpoint(request: Request, body: BacktestRequest):
-    """
-    Direct backtest endpoint — bypasses the agent entirely.
-
-    The agent strips the equity curve before sending results to the LLM
-    because 245 daily data points waste context tokens. This endpoint
-    returns the full equity curve so the frontend can render a Plotly chart.
-
-    Rate limited to 5/minute — heavier computation than /query.
-    """
     logger.info("[API] /backtest → %s %s→%s", body.tickers, body.start_date, body.end_date)
+
+    # ── Market detection — block mixed portfolios ──────────────────────────
+    tickers    = body.tickers
+    has_indian = any(t.endswith(".NS") or t.endswith(".BO") for t in tickers)
+    has_us     = any(not t.endswith(".NS") and not t.endswith(".BO") for t in tickers)
+
+    if has_indian and has_us:
+        raise HTTPException(
+            status_code=400,
+            detail="Mixed portfolios not supported. Use either US tickers or Indian (.NS/.BO) tickers, not both."
+        )
+    # ───────────────────────────────────────────────────────────────────────
 
     try:
         start = datetime.strptime(body.start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
@@ -211,16 +214,24 @@ async def backtest_endpoint(request: Request, body: BacktestRequest):
             "start"       : body.start_date,
             "end"         : body.end_date,
             "metrics"     : result["metrics"],
-            "equity_curve": result["equity_curve"],  # full daily curve for Plotly
+            "equity_curve": result["equity_curve"],
         }
 
     except ValueError as e:
-        # Bad date format or invalid tickers — client error
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error("[backtest] Error: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
+
+import httpx
+@app.get("/search")
+async def search_tickers(q: str, market: str = "US"):
+    region = "IN" if market == "IN" else "US"
+    url = f"https://query1.finance.yahoo.com/v1/finance/search?q={q}&region={region}&lang=en-US&quotesCount=10"
+    async with httpx.AsyncClient() as client:
+        res = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+        return res.json()
 
 @app.websocket("/ws/query")
 async def websocket_query(websocket: WebSocket):

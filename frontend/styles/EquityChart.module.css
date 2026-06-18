@@ -3,9 +3,18 @@
   border: 0.5px solid #252840;
   border-radius: 12px;
   padding: 20px;
-  height: 500px;
   display: flex;
   flex-direction: column;
+  gap: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .label {
@@ -13,7 +22,23 @@
   font-family: 'JetBrains Mono', monospace;
   letter-spacing: 0.12em;
   color: #BA7517;
-  margin-bottom: 16px;
+}
+
+.tickers {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ticker {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #EF9F27;
+  background: rgba(239,159,39,0.08);
+  border: 0.5px solid rgba(239,159,39,0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.06em;
 }
 
 .empty {
@@ -21,5 +46,130 @@
   font-size: 12px;
   font-family: 'JetBrains Mono', monospace;
   text-align: center;
-  margin-top: 40px;
+  margin: 60px 0;
+}
+
+/* Metrics */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 0.5px solid #252840;
+}
+
+.metric {
+  background: #0D0F18;
+  border: 0.5px solid #252840;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.metricLabel {
+  font-size: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.1em;
+  color: #6B7094;
+  margin-bottom: 5px;
+}
+
+.metricVal {
+  font-size: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #EF9F27;
+}
+
+/* Investment simulator */
+.simulator {
+  margin-top: 12px;
+  padding: 14px 16px;
+  background: #0D0F18;
+  border: 0.5px solid #252840;
+  border-radius: 8px;
+}
+
+.simLabel {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.12em;
+  color: #6B7094;
+  margin-bottom: 10px;
+}
+
+.simRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.simInputWrap {
+  display: flex;
+  align-items: center;
+  background: #161929;
+  border: 0.5px solid #252840;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.simInputWrap:focus-within {
+  border-color: #BA7517;
+}
+
+.simPrefix {
+  padding: 0 10px;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #6B7094;
+  border-right: 0.5px solid #252840;
+}
+
+.simInput {
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: #E8EAF0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  outline: none;
+  width: 120px;
+}
+
+.simInput::-webkit-outer-spin-button,
+.simInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.simArrow {
+  font-size: 16px;
+  color: #BA7517;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.simResult {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.simEndAmount {
+  font-size: 22px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.simProfit {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.green { color: #1D9E75; }
+.red   { color: #E24B4A; }
+
+@media (max-width: 900px) {
+  .metrics { grid-template-columns: repeat(3, 1fr); }
 }

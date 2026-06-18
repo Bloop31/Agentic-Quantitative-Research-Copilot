@@ -253,6 +253,9 @@ Key rules:
 - Log returns are already fetched — use them directly for calculations
 - If no date range is specified, default to the last 1 year
 - Format numbers clearly: percentages to 2 decimal places, ratios to 3 decimal places
+- For Indian stocks use NSE suffix: RELIANCE.NS, TCS.NS, INFY.NS etc.
+- Never mix Indian and US tickers in the same query
+- Indian prices are in INR, US prices in USD — they cannot be compared directly
 
 Today's date: {today}
 """

@@ -1,30 +1,45 @@
 /**
  * components/EquityChart.jsx
  * Props:
- *   data  { date: string, value: number }[]
+ *   data     { date: string, value: number }[]
+ *   metrics  { cumulative_return, annualized_return, annualized_volatility, sharpe_ratio, max_drawdown } | null
+ *   tickers  string[]
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "../styles/EquityChart.module.css";
 
-export default function EquityChart({ data }) {
+function fmt(val, type) {
+  if (val === undefined || val === null) return "—";
+  if (type === "pct") return `${(val * 100).toFixed(1)}%`;
+  if (type === "num") return val.toFixed(2);
+  return val;
+}
+
+function fmtMoney(val) {
+  if (!val && val !== 0) return "—";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(val);
+}
+
+export default function EquityChart({ data, metrics, tickers }) {
   const chartRef = useRef(null);
   const plotRef  = useRef(null);
+  const [investment, setInvestment] = useState("10000");
+
+  const hasData = data && data.length > 0;
+  const finalMultiplier = hasData ? data[data.length - 1].value : null;
+  const investedAmount  = parseFloat(investment.replace(/,/g, "")) || 0;
+  const endAmount       = finalMultiplier ? investedAmount * finalMultiplier : null;
+  const profit          = endAmount !== null ? endAmount - investedAmount : null;
+  const isProfit        = profit >= 0;
 
   useEffect(() => {
-    // Wait for container to have actual dimensions
     const container = chartRef.current;
     if (!container) return;
 
     import("plotly.js-dist-min").then((Plotly) => {
-      const hasData = data && data.length > 0;
-
-      // Don't render at all if no data — avoids broken empty chart
       if (!hasData) {
-        if (plotRef.current) {
-          Plotly.purge(container);
-          plotRef.current = false;
-        }
+        if (plotRef.current) { Plotly.purge(container); plotRef.current = false; }
         return;
       }
 
@@ -33,9 +48,7 @@ export default function EquityChart({ data }) {
 
       const trace = {
         x, y,
-        type: "scatter",
-        mode: "lines",
-        name: "Portfolio",
+        type: "scatter", mode: "lines",
         line: { color: "#EF9F27", width: 1.5 },
         fill: "tozeroy",
         fillcolor: "rgba(239,159,39,0.07)",
@@ -61,12 +74,10 @@ export default function EquityChart({ data }) {
         showlegend: false,
       };
 
-      const config = { displayModeBar: false, responsive: true };
-
       if (plotRef.current) {
-        Plotly.react(container, [trace], layout, config);
+        Plotly.react(container, [trace], layout, { displayModeBar: false, responsive: true });
       } else {
-        Plotly.newPlot(container, [trace], layout, config);
+        Plotly.newPlot(container, [trace], layout, { displayModeBar: false, responsive: true });
         plotRef.current = true;
       }
     });
@@ -74,14 +85,80 @@ export default function EquityChart({ data }) {
 
   return (
     <div className={styles.card}>
-      <div className={styles.label}>PORTFOLIO EQUITY CURVE</div>
+      {/* Header */}
+      <div className={styles.header}>
+        <div className={styles.label}>PORTFOLIO EQUITY CURVE</div>
+        {tickers && tickers.length > 0 && (
+          <div className={styles.tickers}>
+            {tickers.map(t => <span key={t} className={styles.ticker}>{t}</span>)}
+          </div>
+        )}
+      </div>
 
-      {(!data || data.length === 0) ? (
-        <div className={styles.empty}>
-          Run a backtest to see the equity curve
-        </div>
+      {!hasData ? (
+        <div className={styles.empty}>Run a backtest to see the equity curve</div>
       ) : (
-        <div ref={chartRef} style={{ width: "100%", height: 340 }} />
+        <>
+          {/* Chart */}
+          <div ref={chartRef} style={{ width: "100%", height: 220 }} />
+
+          {/* Metrics */}
+          {metrics && (
+            <div className={styles.metrics}>
+              <div className={styles.metric}>
+                <div className={styles.metricLabel}>TOTAL RETURN</div>
+                <div className={`${styles.metricVal} ${metrics.cumulative_return >= 0 ? styles.green : styles.red}`}>
+                  {metrics.cumulative_return >= 0 ? "+" : ""}{fmt(metrics.cumulative_return, "pct")}
+                </div>
+              </div>
+              <div className={styles.metric}>
+                <div className={styles.metricLabel}>ANN. RETURN</div>
+                <div className={`${styles.metricVal} ${metrics.annualized_return >= 0 ? styles.green : styles.red}`}>
+                  {metrics.annualized_return >= 0 ? "+" : ""}{fmt(metrics.annualized_return, "pct")}
+                </div>
+              </div>
+              <div className={styles.metric}>
+                <div className={styles.metricLabel}>SHARPE RATIO</div>
+                <div className={styles.metricVal}>{fmt(metrics.sharpe_ratio, "num")}</div>
+              </div>
+              <div className={styles.metric}>
+                <div className={styles.metricLabel}>VOLATILITY</div>
+                <div className={styles.metricVal}>{fmt(metrics.annualized_volatility, "pct")}</div>
+              </div>
+              <div className={styles.metric}>
+                <div className={styles.metricLabel}>MAX DRAWDOWN</div>
+                <div className={`${styles.metricVal} ${styles.red}`}>{fmt(metrics.max_drawdown, "pct")}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Investment simulator */}
+          <div className={styles.simulator}>
+            <div className={styles.simLabel}>INVESTMENT SIMULATOR</div>
+            <div className={styles.simRow}>
+              <div className={styles.simInputWrap}>
+                <span className={styles.simPrefix}>$</span>
+                <input
+                  className={styles.simInput}
+                  type="number"
+                  min="0"
+                  value={investment}
+                  onChange={e => setInvestment(e.target.value)}
+                  placeholder="10000"
+                />
+              </div>
+              <div className={styles.simArrow}>→</div>
+              <div className={styles.simResult}>
+                <div className={`${styles.simEndAmount} ${isProfit ? styles.green : styles.red}`}>
+                  {fmtMoney(endAmount)}
+                </div>
+                <div className={`${styles.simProfit} ${isProfit ? styles.green : styles.red}`}>
+                  {isProfit ? "+" : ""}{fmtMoney(profit)} ({isProfit ? "+" : ""}{fmt(metrics?.cumulative_return, "pct")})
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

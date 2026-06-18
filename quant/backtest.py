@@ -154,6 +154,13 @@ class Backtester:
             initial_capital * equity,
             index=portfolio_returns.index
         )
+        
+    def detect_market(tickers):
+        if all(t.endswith(".NS") or t.endswith(".BO") for t in tickers):
+            return "IN"
+        if all(not t.endswith(".NS") and not t.endswith(".BO") for t in tickers):
+            return "US"
+        return "MIXED"  # this is error, either indian or us cuz we gonna us the ticker from here and put in url to fetch
 
     def run(
         self,
