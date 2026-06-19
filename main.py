@@ -225,13 +225,35 @@ async def backtest_endpoint(request: Request, body: BacktestRequest):
 
 
 import httpx
+from redis_cache import get_cached_raw, set_cached_raw
 @app.get("/search")
 async def search_tickers(q: str, market: str = "US"):
+    q = q.strip()
+    if not q:
+        return {"quotes": []}
+    cache_key = f"search:{market}:{q.lower()}"
+
+    cached = await get_cached_raw(cache_key)
+    if cached is not None:
+        return cached
+
     region = "IN" if market == "IN" else "US"
     url = f"https://query1.finance.yahoo.com/v1/finance/search?q={q}&region={region}&lang=en-US&quotesCount=10"
-    async with httpx.AsyncClient() as client:
-        res = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
-        return res.json()
+
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(2.5, connect=1.5)) as client:
+            res = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            res.raise_for_status()
+            data = res.json()
+            await set_cached_raw(cache_key, data, ttl=300)
+            return data
+    except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.HTTPStatusError) as e:
+        logger.warning("[search] Yahoo Finance failed for q=%s: %s", q, e)
+        return {"quotes": []}
+    except Exception as e:
+        logger.error("[search] Unexpected error: %s", e)
+        return {"quotes": []}
+
 
 @app.websocket("/ws/query")
 async def websocket_query(websocket: WebSocket):
