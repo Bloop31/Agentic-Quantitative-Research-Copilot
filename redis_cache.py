@@ -117,3 +117,42 @@ async def invalidate(query: str) -> None:
     key    = _make_key(query)
     await client.delete(key)
     logger.info("[cache] DEL  — %s", query[:60])
+
+
+# ---------------------------------------------------------------------------
+# Generic cache interface (for non-query caching, e.g. /search)
+# ---------------------------------------------------------------------------
+
+async def get_cached_raw(key: str) -> dict | None:
+    """
+    Look up an arbitrary key in Redis (no hashing/prefixing applied).
+
+    Args:
+        key: full cache key, e.g. "search:US:appl"
+
+    Returns:
+        Cached value dict if found, None if cache miss.
+    """
+    client = _get_client()
+    raw = await client.get(key)
+
+    if raw is None:
+        logger.info("[cache] MISS — %s", key)
+        return None
+
+    logger.info("[cache] HIT  — %s", key)
+    return json.loads(raw)
+
+
+async def set_cached_raw(key: str, value: dict, ttl: int = 300) -> None:
+    """
+    Store a value under an arbitrary key with a custom TTL.
+
+    Args:
+        key:   full cache key, e.g. "search:US:appl"
+        value: JSON-serialisable dict
+        ttl:   seconds until expiry (default 5 min)
+    """
+    client = _get_client()
+    await client.setex(key, ttl, json.dumps(value))
+    logger.info("[cache] SET  — %s (TTL=%ds)", key, ttl)
