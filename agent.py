@@ -260,6 +260,60 @@ Key rules:
 Today's date: {today}
 """
 
+# ===========================================================================
+# Tool result compaction — keeps message history small to avoid 413s
+# ===========================================================================
+
+COMPACT_THRESHOLD_CHARS = 2000  # results larger than this get summarized
+
+def _compact_tool_result(result: dict) -> dict:
+    """
+    Shrink large tool results before they re-enter the LLM's message history.
+
+    Specifically targets get_close_prices' "closes" field — a per-ticker
+    {date: price} dict that can run to thousands of chars for a 1yr range.
+    Replaces it with summary stats (count, start, end, first, last, min, max)
+    while leaving small results untouched.
+
+    Args:
+        result: the dict returned by a tool function
+
+    Returns:
+        dict — same shape, but with large nested series replaced by summaries
+    """
+    if not isinstance(result, dict):
+        return result
+
+    compacted = dict(result)  # shallow copy, don't mutate original
+
+    if "closes" in compacted and isinstance(compacted["closes"], dict):
+        summarized = {}
+        for ticker, series in compacted["closes"].items():
+            if not isinstance(series, dict) or not series:
+                summarized[ticker] = series
+                continue
+
+            dates  = list(series.keys())
+            values = list(series.values())
+
+            summarized[ticker] = {
+                "count": len(values),
+                "start_date": dates[0],
+                "end_date": dates[-1],
+                "first_close": values[0],
+                "last_close": values[-1],
+                "min_close": min(values),
+                "max_close": max(values),
+            }
+
+        compacted["closes"] = summarized
+        compacted["note"] = (
+            "Full daily series available but summarized here to save tokens. "
+            "Use first_close/last_close/min/max/count for analysis."
+        )
+
+    return compacted
+
 
 # ===========================================================================
 # Tool executor — routes LLM tool calls to actual functions
@@ -268,41 +322,28 @@ Today's date: {today}
 async def _execute_tool(tool_name: str, tool_args: dict) -> str:
     """
     Execute a tool call from the LLM and return result as a JSON string.
-
-    Args:
-        tool_name: name of the tool the LLM wants to call
-        tool_args: arguments the LLM passed
-
-    Returns:
-        JSON string of the tool result
+    Large results are compacted before serialization to prevent 413s
+    on the next LLM call.
     """
     logger.info("[tool] Calling %s with args: %s", tool_name, tool_args)
 
     try:
         if tool_name == "get_price_data":
             result = await get_price_data(**tool_args)
-
         elif tool_name == "get_close_prices":
             result = await get_close_prices(**tool_args)
-
         elif tool_name == "refresh_ticker":
             result = await refresh_ticker(**tool_args)
-        
         elif tool_name == "get_max_drawdown":
             result = await get_max_drawdown(**tool_args)
-            
         elif tool_name == "get_var_95":
             result = await get_var_95(**tool_args)
-            
         elif tool_name == "get_correlation_matrix":
             result = await get_correlation_matrix(**tool_args)
-            
         elif tool_name == "get_portfolio_summary":
             result = await get_portfolio_summary(**tool_args)
-            
         elif tool_name == "run_backtest":
             result = await run_backtest(**tool_args)
-
         else:
             result = {"status": "error", "message": f"Unknown tool: {tool_name}"}
 
@@ -310,11 +351,21 @@ async def _execute_tool(tool_name: str, tool_args: dict) -> str:
         logger.error("[tool] Error executing %s: %s", tool_name, e)
         result = {"status": "error", "message": str(e)}
 
-    # Convert datetime keys to strings for JSON serialisation
+    # Compactinmg large results before they enter message history
+    result = _compact_tool_result(result)
+
     result_str = json.dumps(result, default=str)
+
+    # Safety net: if still oversized after targeted compaction, hard-truncate
+    if len(result_str) > COMPACT_THRESHOLD_CHARS * 5:
+        logger.warning(
+            "[tool] %s result still large after compaction (%d chars) — hard truncating",
+            tool_name, len(result_str)
+        )
+        result_str = result_str[:COMPACT_THRESHOLD_CHARS * 5] + '..."}'
+
     logger.info("[tool] %s → %d chars returned", tool_name, len(result_str))
     return result_str
-
 
 # ===========================================================================
 # Provider 1 — Groq
