@@ -93,5 +93,5 @@ uvicorn main:app --reload
 ## Roadmap
 
 - [x] Phase 1 — MongoDB, yfinance, agent, MCP tools
-- [ ] Phase 2 — FastAPI, WebSocket, Redis, portfolio + screener MCP servers
-- [ ] Phase 3 — Frontend, backtest engine, factor analysis, optimizer
+- [x] Phase 2 — FastAPI, WebSocket, Redis, portfolio + screener MCP servers
+- [x] Phase 3 — Frontend, backtest engine, factor analysis, optimizer
