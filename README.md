@@ -8,29 +8,10 @@ Built with an agent-first architecture: the LLM decides which tools to call,
 executes them against live market data, and synthesises the results. Not a
 chatbot wrapper — a reasoning system with real financial computation.
 
-![Quant Copilot](assets/00-landing-hero.png)
 
 ---
 
-## Demo
 
-**One query, full pipeline.** Correlation, Sharpe ratio, and drawdown across a
-three-stock portfolio — fetched, computed, and reported end to end, with the
-backtest equity curve rendered live.
-
-![Agent run](assets/02-agent-run.gif)
-
-**Every tool call streams as it happens.** No black box — you watch the agent
-fetch, compute, and reason.
-
-![Live tool calls](assets/03-tool-stream.gif)
-
-<details>
-<summary>Text version of the stream</summary>
-
-> **Query:** "Build an equal-weight portfolio of AAPL, MSFT and NVDA over the
-> last two years. How correlated are they, what's the Sharpe ratio, and what
-> was the worst drawdown?"
 
 ```
 CALLING TOOL   get_correlation_matrix(['AAPL','MSFT','NVDA'], '2024-07-27', '2026-07-27')
@@ -49,14 +30,7 @@ Worst peak-to-trough loss over the window: NVDA -36.88%, MSFT -33.91%,
 AAPL -33.36%.
 ```
 
-</details>
 
-Running the backtest on the same basket over a one-year window returns
-**+27.4% cumulative** (+31.3% annualised), **Sharpe 1.73**, **18.1% volatility**,
-**-17.6% max drawdown** — the higher Sharpe reflects the shorter window, which
-excludes the drawdown captured in the two-year query above.
-
----
 
 ## Architecture
 
